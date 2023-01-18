@@ -1,4 +1,4 @@
-// This file is used to get the emotion from the user
+# This file is used to get the emotion from the user
 
 def set_emo(num):
     convert_dict = {
