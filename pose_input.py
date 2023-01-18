@@ -25,7 +25,7 @@ def get_pose(frame):
     if pose_results.pose_landmarks:
         for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
             result[mp_pose.PoseLandmark(i).name] = {"x":landmark.x,"y":landmark.y}
-    return result,pose_results
+    return result
 
 
 if __name__ == "__main__":
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         if ret is False:
             break
         
-        result,pose_results = get_pose(frame)
+        result = get_pose(frame)
         
         
         # 有効なランドマークが検出された場合、ランドマークを描画
