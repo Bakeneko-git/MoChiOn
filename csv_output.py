@@ -5,6 +5,7 @@ class CsvSaveService:
 
   def __init__(self, filepath: str):
     self.filepath = filepath
+    self.is_first = True
     pass
 
   @staticmethod
@@ -22,9 +23,11 @@ class CsvSaveService:
   def save_data(self, data):
     res = self.convert_data(data)
     print(res.keys())
-    with open(self.filepath, "w", newline="") as f:
+    with open(self.filepath, "a", newline="") as f:
       writer = csv.DictWriter(f, fieldnames=res.keys())
-      writer.writeheader()
+      if (self.is_first):
+        writer.writeheader()
+        self.is_first = False
       writer.writerow(res)
     
 if __name__ == "__main__": 
