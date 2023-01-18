@@ -13,8 +13,8 @@ class CsvSaveService:
     res_data = dict()
     for bone_name, pos_dict in data["pose"].items():
       for pos_label, pos in pos_dict.items():
-        print(f"{bone_name}_{pos_label}") 
-        print(pos)
+        # print(f"{bone_name}_{pos_label}") 
+        # print(pos)
         res_data[f"{bone_name}_{pos_label}"] = pos
     res_data["emotion"] = data["emotion"]
     res_data["timestamp"] = data["timestamp"]
@@ -22,7 +22,7 @@ class CsvSaveService:
 
   def save_data(self, data):
     res = self.convert_data(data)
-    print(res.keys())
+    # print(res.keys())
     with open(self.filepath, "a", newline="") as f:
       writer = csv.DictWriter(f, fieldnames=res.keys())
       if (self.is_first):
