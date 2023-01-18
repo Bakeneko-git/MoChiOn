@@ -22,7 +22,7 @@ def get_pose(frame):
     if pose_results.pose_landmarks:
         for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
             result[i] = {"x":landmark.x,"y":landmark.y}
-    return pose_results.pose_landmarks,result
+    return result
 
 
 if __name__ == "__main__":
@@ -40,13 +40,8 @@ if __name__ == "__main__":
         if ret is False:
             break
         
-        pose_results,result = get_pose(frame)
+        result = get_pose(frame)
         
-        # 有効なランドマークが検出された場合、ランドマークを描画
-        if pose_results:
-            mp_drawing.draw_landmarks(frame, pose_results,
-                                        mp_pose.POSE_CONNECTIONS)
-            break
         
         # ディスプレイ表示
         cv2.imshow('chapter02', frame)
