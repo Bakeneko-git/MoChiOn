@@ -1,8 +1,6 @@
 import csv
 from datetime import datetime
 
-# test_data = {"pose" : {"hoge": {"x": 1.0, "y": 2.0}, "fuga": {"x": 1.0, "y": 2.0}, "san": {"x": 1.0, "y": 2.0}, "hu": {"x": 1.0, "y": 2.0}}, "emotion": 1, "timestamp": datetime.now()}
-
 class CsvSaveService:
 
   def __init__(self, filepath: str):
@@ -29,6 +27,8 @@ class CsvSaveService:
       writer.writeheader()
       writer.writerow(res)
     
-# csv_save = CsvSaveService("hoge.csv")
-# data = csv_save.save_data(test_data)
-# print(data)
+if __name__ == "__main__": 
+  test_data = {"pose" : {"hoge": {"x": 1.0, "y": 2.0}, "fuga": {"x": 1.0, "y": 2.0}, "san": {"x": 1.0, "y": 2.0}, "hu": {"x": 1.0, "y": 2.0}}, "emotion": 1, "timestamp": datetime.now()}
+  csv_save = CsvSaveService("hoge.csv")
+  data = csv_save.save_data(test_data)
+  print(data)
