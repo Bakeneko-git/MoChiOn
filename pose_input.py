@@ -45,10 +45,6 @@ if __name__ == "__main__":
         result = get_pose(frame)
         
         
-        # 有効なランドマークが検出された場合、ランドマークを描画
-        if pose_results.pose_landmarks:
-            mp_drawing.draw_landmarks(frame, pose_results.pose_landmarks,
-                                        mp_pose.POSE_CONNECTIONS)
         # ディスプレイ表示
         cv2.imshow('chapter02', frame)
         
