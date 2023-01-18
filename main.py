@@ -1,7 +1,9 @@
 import data_service
 
 def main():
-  data_service.run()    
+  data = data_service.DataService()
+  data.run() 
     
-main()
+if __name__ == "__main__":
+  main()
 
