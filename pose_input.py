@@ -1,33 +1,35 @@
 import cv2
 import mediapipe as mp
 
+
+mp_pose = mp.solutions.pose
+
+# MediaPipe pose初期化
+pose = mp_pose.Pose(
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5
+)
+
 def get_pose(frame):
-    # MediaPipe pose初期化
-    mp_pose = mp.solutions.pose
-    with mp_pose.Pose(
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5
-    ) as pose:
+    
+    # MediaPipeで扱う画像は、OpenCVのBGRの並びではなくRGBのため変換
+    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    
+    # 画像をリードオンリーにしてpose検出処理実施
+    rgb_image.flags.writeable = False
+    #姿勢
+    pose_results = pose.process(rgb_image)
+    rgb_image.flags.writeable = True
 
-        # MediaPipeで扱う画像は、OpenCVのBGRの並びではなくRGBのため変換
-        rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # 画像をリードオンリーにしてpose検出処理実施
-        rgb_image.flags.writeable = False
-        #姿勢
-        pose_results = pose.process(rgb_image)
-        rgb_image.flags.writeable = True
-
-        result = {}
-        if pose_results.pose_landmarks:
-            for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
-                result[mp_pose.PoseLandmark(i).name] = {"x":landmark.x,"y":landmark.y}
-    return result
+    result = {}
+    if pose_results.pose_landmarks:
+        for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
+            result[mp_pose.PoseLandmark(i).name] = {"x":landmark.x,"y":landmark.y}
+    return result,pose_results
 
 
 if __name__ == "__main__":
     mp_drawing = mp.solutions.drawing_utils
-    mp_pose = mp.solutions.pose
     pose = mp_pose.Pose(
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5
@@ -40,8 +42,14 @@ if __name__ == "__main__":
         if ret is False:
             break
         
-        result = get_pose(frame)
-
+        result,pose_results = get_pose(frame)
+        
+        
+        # 有効なランドマークが検出された場合、ランドマークを描画
+        if pose_results.pose_landmarks:
+            mp_drawing.draw_landmarks(frame, pose_results.pose_landmarks,
+                                        mp_pose.POSE_CONNECTIONS)
+        # ディスプレイ表示
         cv2.imshow('chapter02', frame)
         
         #print(pose_results)
