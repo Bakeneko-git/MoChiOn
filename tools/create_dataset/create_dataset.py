@@ -7,6 +7,7 @@ import itertools
 from collections import deque
 import csv_output
 from datetime import datetime
+import os
 
 import cv2
 import mediapipe as mp
@@ -15,7 +16,6 @@ import mediapipe as mp
 # コマンドライン引数取得
 parser = argparse.ArgumentParser()
 parser.add_argument("--pat", type=int, default=0)
-parser.add_argument("--name", type=str)
 parser.add_argument("--path", type=str)
 parser.add_argument("--frames", type=int, default=150)
 args = parser.parse_args()
@@ -28,7 +28,7 @@ pat_dict = {
     4:"00001"
 }
 
-csv_save = csv_output.CsvSaveService(args.name + "_" + pat_dict[args.pat] + ".csv")
+csv_save = csv_output.CsvSaveService(os.path.splitext(os.path.basename(args.path))[0] + "_" + pat_dict[args.pat] + ".csv")
 
 
 # ランドマークの画像上の位置を算出する関数
