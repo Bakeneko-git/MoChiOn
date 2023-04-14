@@ -16,6 +16,7 @@ import mediapipe as mp
 parser = argparse.ArgumentParser()
 parser.add_argument("--pat", type=int, default=0)
 parser.add_argument("--name", type=str)
+parser.add_argument("--path", type=str)
 parser.add_argument("--frames", type=int, default=150)
 args = parser.parse_args()
 
@@ -65,7 +66,7 @@ camera_no = 0
 #video_capture = cv2.VideoCapture(camera_no)
 #video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 #video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-video_capture = cv2.VideoCapture("./sample.mp4")
+video_capture = cv2.VideoCapture(args.path)
 
 # MediaPipe poses初期化
 # mp_poses = mp.solutions.pose
