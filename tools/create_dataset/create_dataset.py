@@ -36,10 +36,12 @@ def calc_landmark_list(image, landmarks):
     landmark_point = []
     image_width, image_height = image.shape[1], image.shape[0]
 
+    center_x = (landmarks.landmark[23].x + landmarks.landmark[24].x) / 2
+    center_y = (landmarks.landmark[23].y + landmarks.landmark[24].y) / 2
     for _, landmark in enumerate(landmarks.landmark):
-        landmark_x = min(int(landmark.x * image_width), image_width - 1)
-        landmark_y = min(int(landmark.y * image_height), image_height - 1)
-        landmark_point.append([landmark_x, landmark_y])
+        landmark_x = min(int(landmark.x - center_x),image_width - 1)
+        landmark_y = min(int(landmark.y - center_y), image_height - 1)
+        landmark_point.append({"x":landmark_x, "y":landmark_y})
 
     return landmark_point
 
@@ -48,8 +50,7 @@ def calc_landmark_list(image, landmarks):
 def draw_point_history(image, point_history):
     for index, point in enumerate(point_history):
         if point[0] != 0 and point[1] != 0:
-            cv2.circle(image, (point[0], point[1]), 1 + int(index / 2),
-                       (255, 0, 0), 2)
+            cv2.circle(image, (point[0], point[1]), 1 + int(index / 2),(255, 0, 0), 2)
     return image
 
 
@@ -88,7 +89,7 @@ point_history = deque(maxlen=history_length)
 # CSVファイル保存先
 csv_path = './point_history.csv'
 
-frame_count = 0 
+frame_count = 0
 while video_capture.isOpened():
     # カメラ画像取得
     ret, frame = video_capture.read()
@@ -116,7 +117,7 @@ while video_capture.isOpened():
         landmark_list = calc_landmark_list(rgb_image, pose_results.pose_landmarks)
         # 人差指の指先座標を履歴に追加
         # point_history.append(landmark_list[ID_FINGER_TIP])
-        
+
         result = {}
         data_source = {}
         for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
