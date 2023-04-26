@@ -36,11 +36,13 @@ def calc_landmark_list(image, landmarks):
     landmark_point = []
     image_width, image_height = image.shape[1], image.shape[0]
 
-    center_x = (landmarks.landmark[23].x + landmarks.landmark[24].x) / 2
-    center_y = (landmarks.landmark[23].y + landmarks.landmark[24].y) / 2
+    #center_x = (landmarks.landmark[23].x + landmarks.landmark[24].x) / 2
+    #center_y = (landmarks.landmark[23].y + landmarks.landmark[24].y) / 2
+    center_x = landmarks.landmark[0].x
+    center_y = landmarks.landmark[0].y
     for _, landmark in enumerate(landmarks.landmark):
-        landmark_x = min(int(landmark.x - center_x),image_width - 1)
-        landmark_y = min(int(landmark.y - center_y), image_height - 1)
+        landmark_x = landmark.x - center_x
+        landmark_y = landmark.y - center_y
         landmark_point.append({"x":landmark_x, "y":landmark_y})
 
     return landmark_point
@@ -91,6 +93,9 @@ csv_path = './point_history.csv'
 
 frame_count = 0
 while video_capture.isOpened():
+    
+    if frame_count >= args.frames:
+        break
     # カメラ画像取得
     ret, frame = video_capture.read()
     if ret is False:
@@ -120,8 +125,9 @@ while video_capture.isOpened():
 
         result = {}
         data_source = {}
-        for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
-            result[mp_pose.PoseLandmark(i).name] = {"x":landmark.x,"y":landmark.y}
+        #for i,landmark in enumerate(pose_results.pose_landmarks.landmark):
+        for i,landmark in enumerate(landmark_list):
+            result[mp_pose.PoseLandmark(i).name] = {"x":landmark["x"],"y":landmark["y"]}
         data_source["pose"] = result
         data_source["timestamp"] = datetime.now()
         csv_save.save_data(data_source)
@@ -135,8 +141,6 @@ while video_capture.isOpened():
     if key == 27:  # ESC
         break
 
-    if frame_count >= args.frames:
-        break
 
     frame_count += 1
 
