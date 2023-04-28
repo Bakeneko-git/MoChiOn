@@ -103,9 +103,6 @@ for file in file_list:
             break
         frame_width, frame_height = frame.shape[1], frame.shape[0]
 
-        # 鏡映しになるよう反転
-        frame = cv2.flip(frame, 1)
-
         # MediaPipeで扱う画像は、OpenCVのBGRの並びではなくRGBのため変換
         rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
