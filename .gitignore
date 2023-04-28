@@ -1,3 +1,4 @@
 MoChiOn.code-workspace
 .vscode/
 __pycache__/
+tools/create_dataset/video/*.mp4
