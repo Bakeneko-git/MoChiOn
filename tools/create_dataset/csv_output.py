@@ -16,8 +16,10 @@ class CsvSaveService:
         # print(f"{bone_name}_{pos_label}") 
         # print(pos)
         res_data[f"{bone_name}_{pos_label}"] = pos
+    # ラベルの保存
     #res_data["emotion"] = data["emotion"]
-    res_data["timestamp"] = data["timestamp"]
+    # タイムスタンプの保存
+    # res_data["timestamp"] = data["timestamp"]
     return res_data
 
   def save_data(self, data):
