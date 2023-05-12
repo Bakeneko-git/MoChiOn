@@ -138,6 +138,9 @@ for file in file_list:
             csv_save.save_data(data_source)
 
             if frip:
+                
+                result = {}
+                data_source = {}
                 # ランドマークの取得
                 for i,landmark in enumerate(landmark_list):
                     result[mp_pose.PoseLandmark(i).name] = {"x":-landmark["x"],"y":landmark["y"]}
