@@ -154,7 +154,7 @@ for file in file_list:
 
         # ディスプレイ表示
         frame = draw_point_history(frame, point_history)
-        cv2.imshow('preview', frame)
+        #cv2.imshow('preview', frame)
 
         # キー入力(ESC:プログラム終了)
         #key = cv2.waitKey(1)
