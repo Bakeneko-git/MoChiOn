@@ -133,7 +133,7 @@ for file in file_list:
             for i,landmark in enumerate(landmark_list):
                 result[mp_pose.PoseLandmark(i).name] = {"x":landmark["x"],"y":landmark["y"]}
             data_source["pose"] = result
-            data_source["timestamp"] = datetime.now()
+            #data_source["timestamp"] = datetime.now()
             # csvに書き込み
             csv_save.save_data(data_source)
 
