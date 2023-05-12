@@ -53,6 +53,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--pat", type=int, default=0) # ファイル名用
 parser.add_argument("--path", type=str) # ディレクトリ動画の選択
 parser.add_argument("--frames", type=int, default=150) # 取得フレーム数(30fps, 5s)
+parser.add_argument("--frip", type=int, default=0) # 取得フレーム数(30fps, 5s)
 args = parser.parse_args()
 
 pat_dict = {
@@ -71,6 +72,9 @@ pose = mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
+
+# fripの有効
+frip = (args.frip == 1)
 
 # ディレクトリのパスを保存
 video_directory = args.path 
@@ -132,6 +136,16 @@ for file in file_list:
             data_source["timestamp"] = datetime.now()
             # csvに書き込み
             csv_save.save_data(data_source)
+
+            if frip:
+                # ランドマークの取得
+                for i,landmark in enumerate(landmark_list):
+                    result[mp_pose.PoseLandmark(i).name] = {"x":-landmark["x"],"y":landmark["y"]}
+                data_source["pose"] = result
+                data_source["timestamp"] = datetime.now()
+                # csvに書き込み
+                csv_save.save_data(data_source)
+
 
         # ディスプレイ表示
         frame = draw_point_history(frame, point_history)
