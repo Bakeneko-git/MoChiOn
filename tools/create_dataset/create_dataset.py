@@ -86,6 +86,8 @@ file_list = os.listdir(video_directory)
 for file in file_list:
     # 保存CSVファイルの作成
     csv_save = csv_output.CsvSaveService(os.path.splitext(os.path.basename(file))[0] + "_" + pat_dict[args.pat] + ".csv")
+    # 保存CSVファイルの作成
+    csv_frip_save = csv_output.CsvSaveService(os.path.splitext(os.path.basename(file))[0] + "_" + pat_dict[args.pat] + "_frip.csv")
     # 動画の読み込み
     video_capture = cv2.VideoCapture(video_directory + "/" + file)
 
@@ -145,9 +147,9 @@ for file in file_list:
                 for i,landmark in enumerate(landmark_list):
                     result[mp_pose.PoseLandmark(i).name] = {"x":-landmark["x"],"y":landmark["y"]}
                 data_source["pose"] = result
-                data_source["timestamp"] = datetime.now()
+                #data_source["timestamp"] = datetime.now()
                 # csvに書き込み
-                csv_save.save_data(data_source)
+                csv_frip_save.save_data(data_source)
 
 
         # ディスプレイ表示
@@ -155,9 +157,9 @@ for file in file_list:
         cv2.imshow('preview', frame)
 
         # キー入力(ESC:プログラム終了)
-        key = cv2.waitKey(1)
-        if key == 27:  # ESC
-            break
+        #key = cv2.waitKey(1)
+        #if key == 27:  # ESC
+            #break
 
         frame_count += 1
 
