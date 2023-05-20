@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pose Estimation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .chart-container {
+      display: flex;
+      justify-content: space-between;
+    }
+    .chart-container > div {
+      flex: 1;
+      margin: 10px;
+    }
+    p {
+      font-size: 40px;
+    }
+    li {
+      font-size: 40px;
+      background-color: slategrey;
+      padding: auto;
+      margin: 10px;
+      padding: 10px;
+      display: inline-block;
+    }
+    li.selected {
+      background-color: lightblue;
+    }
+  </style>
+</head>
+<body>
+  <div class="chart-container">
+    <img src="{{ url_for('video_feed') }}" alt="Video Feed">
+    <div id="output"></div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="chart-container">
+    <div id="chartY"></div>
+    <div id="chartX"></div>
+  </div>
+  
+  <ul id="poseList" class = "flex flex-col"></ul>
+  <script>
+      
+    // 選択できる部位のリスト
+    const selectParts = ["LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP"];
+    // 初期値
+    let selectedPart = selectParts[2];
+    // 選択肢のリストを作成
+    const selectPartsElement = document.getElementById('poseList');
+    // リストにアイテムを追加
+    selectParts.forEach((part) => {
+      const option = document.createElement('li');
+      option.innerText = part;
+      option.addEventListener('click', () => {
+        selectedPart = part;
+        socket.emit("selectPart", {part: part})
+        layoutX = createLandmarkLayout(selectedPart, "X");
+        layoutY = createLandmarkLayout(selectedPart, "Y");
+        selectPartsElement.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+        option.classList.add('selected');
+      });
+      selectPartsElement.appendChild(option);
+    });
+      
+    var socket = io();
+
+    var dataY = [{
+        y: [],
+        type: 'line'
+    }];
+
+    var dataX = [{
+        y: [],
+        type: 'line'
+    }];
+
+    function createLandmarkLayout(graphTitle, axis) {
+      const graphLayout = {
+          title: graphTitle + ' ' + axis + ' position over time',
+          xaxis: {
+              title: 'Timestamp',
+              showgrid: true,
+              zeroline: true,
+          },
+          yaxis: {
+              title: 'Y position',
+              showline: true,
+              zeroline: true,
+              range: [1.0, -0.5]
+          }
+      };
+      return graphLayout;
+    }
+
+    var layoutX = createLandmarkLayout(selectedPart, "X");
+    var layoutY = createLandmarkLayout(selectedPart, "Y");
+
+        let layoutGraph = {
+          title: 'Real-time Histogram',
+          xaxis: { title: 'Count' },
+          yaxis: { title: 'Value' }
+        };
+
+        let dataGraph = [{
+          x: ["neutral", "excl", "question", "thinking", "swing"],
+          y: [0,0,0,0,0],
+          type: 'bar',
+          xbins: {
+           size: 2 // ビンの幅を指定（例: 2）
+          }
+        }];
+
+        Plotly.newPlot('chartY', dataY, layoutY);
+        Plotly.newPlot('chartX', dataX, layoutX);
+        Plotly.newPlot('chart', dataGraph, layoutGraph);
+
+        socket.on('newcoords', function(msg) {
+            var y = dataY[0].y;
+            y.push(msg.y);
+            if (y.length > 50) {
+                y.splice(0, 1);
+            }
+
+            var x = dataX[0].y;
+            x.push(msg.x);
+            if (x.length > 50) {
+                x.splice(0, 1);
+            }
+
+            dataGraph[0].y = msg.data;
+            
+
+            Plotly.update('chartY', dataY, layoutY);
+            Plotly.update('chartX', dataX, layoutX);
+            Plotly.update("chart", dataGraph, layoutGraph)
+
+            let answer = {"0":"neutral","1":"excl","2":"question","3":"thinking","4":"swing"}
+
+            const outputElement = document.getElementById('output');
+            outputElement.innerHTML = ''; // 現在の内容をクリア
+            for (let i = 0; i < msg.data.length; i++) {
+              const paragraph = document.createElement('p');      
+              paragraph.innerText = answer[i] + ": " + msg.data[i];
+              outputElement.appendChild(paragraph);
+            }
+
+        });
+
+    </script>
+</body>
+</html>
