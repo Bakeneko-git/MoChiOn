@@ -6,6 +6,9 @@ import mediapipe as mp
 import nnabla as nn
 from nnabla.utils.nnp_graph import NnpLoader
 import numpy as np
+import datetime
+import os 
+import threading
 
 # initialize 
 app = Flask(__name__)
@@ -23,6 +26,7 @@ selectParts = {"LEFT_SHOULDER" : mp_pose.PoseLandmark.LEFT_SHOULDER,
               "RIGHT_WRIST" : mp_pose.PoseLandmark.RIGHT_WRIST,
               "LEFT_HIP" : mp_pose.PoseLandmark.LEFT_HIP,
               "RIGHT_HIP" : mp_pose.PoseLandmark.RIGHT_HIP}
+answer = {"0":"neutral","1":"excl","2":"question","3":"thinking","4":"swing"}
 # ランドマーク初期値
 graph_landmark = mp_pose.PoseLandmark.LEFT_WRIST
 
@@ -30,6 +34,7 @@ graph_landmark = mp_pose.PoseLandmark.LEFT_WRIST
 results = None # 推論結果
 frame_num = 150 # 推論フレーム
 pose_storage = deque(maxlen=frame_num) # 推論フレームのストレージ
+image_storage = deque(maxlen=frame_num) # 画像フレームのストレージ
 
 # nnablaの初期設定
 batch_size = 1
@@ -37,6 +42,9 @@ nnp = NnpLoader("18landmark.nnp")
 net = nnp.get_network("Runtime", batch_size=batch_size)
 x = net.inputs["Input"]
 y = net.outputs["y'"]
+
+# スレッド管理
+thread_is_running = False
 
 # 推論結果を鼻からの相対距離にする
 def nose_centered(landmarks):
@@ -79,6 +87,7 @@ def gen_frames():
       image.flags.writeable = True
       image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
       mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+      image_storage.append(image) # 画像フレームのキャッシュ
 
       # 推論
 
@@ -103,6 +112,10 @@ def gen_frames():
           y.forward()
           ans = np.array(y.d.copy())
           ans = ans.flatten()
+          if (max(ans) > 0.98 and 0 != np.argmax(ans) and thread_is_running == False):
+            # cache file
+            ans_name = answer[str(np.argmax(ans))]
+            create_thread(image_storage.copy(), ans_name)
           socketio.emit('newcoords', {'x': landmark.x, 'y': landmark.y, 'data': ans.tolist() }) 
         else:
           socketio.emit('newcoords', {'x': landmark.x, 'y': landmark.y, 'data': [0, 0, 0, 0, 0]})
@@ -116,6 +129,29 @@ def gen_frames():
       frame = buffer.tobytes()
       yield (b'--frame\r\n'
               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n') 
+      
+# 画像を保存する関数
+def save_images(cache, time_stamp):
+    global thread_is_running
+
+    thread_is_running = True  # スレッドが開始したことを示す
+
+    for idx, image in enumerate(cache):
+        cv2.imwrite('cache/' + time_stamp + '_' + str(idx) + '.jpg', image)
+
+    thread_is_running = False  # スレッドが終了したことを示す
+
+# キャッシュに画像を保存するスレッドを作成
+def create_thread(cache, filename):
+    global thread_is_running
+    print(thread_is_running)
+
+
+    # 既にスレッドが実行中でない場合にのみ新しいスレッドを作成
+    if not thread_is_running:
+      time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+      thread = threading.Thread(target=save_images, args=(cache, filename + time_stamp))
+      thread.start()
 
 @app.route('/video_feed')
 def video_feed():
