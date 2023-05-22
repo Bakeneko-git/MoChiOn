@@ -1,155 +1,195 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Pose Estimation</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .chart-container {
-      display: flex;
-      justify-content: space-between;
-    }
-    .chart-container > div {
-      flex: 1;
-      margin: 10px;
-    }
-    p {
-      font-size: 40px;
-    }
-    li {
-      font-size: 40px;
-      background-color: slategrey;
-      padding: auto;
-      margin: 10px;
-      padding: 10px;
-      display: inline-block;
-    }
-    li.selected {
-      background-color: lightblue;
-    }
-  </style>
-</head>
-<body>
-  <div class="chart-container">
-    <img src="{{ url_for('video_feed') }}" alt="Video Feed">
-    <div id="output"></div>
-    <div id="chart"></div>
-  </div>
+  <head>
+    <title>Pose Estimation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .chart-container {
+        display: flex;
+        justify-content: space-between;
+      }
+      .chart-container > div {
+        flex: 1;
+        margin: 10px;
+      }
+      p {
+        font-size: 40px;
+      }
+      li {
+        font-size: 40px;
+        background-color: slategrey;
+        padding: auto;
+        margin: 10px;
+        padding: 10px;
+        display: inline-block;
+      }
+      li.selected {
+        background-color: lightblue;
+      }
+    </style>
+  </head>
+  <body>
+    <div class = "flex flex-col">
+      <div class="flex gap-4">
+        <img src="{{ url_for('video_feed') }}" alt="Video Feed" style="width: 1280px; height: 720px;" class = "p-2 m-2">
+        <div id="output" class = "w-1/4"></div>
+        <div id="estimateGraph"></div>
+      </div>
 
-  <div class="chart-container">
-    <div id="chartY"></div>
-    <div id="chartX"></div>
-  </div>
-  
-  <ul id="poseList" class = "flex flex-col"></ul>
-  <script>
+      <div class="chart-container">
+        <div id="landmarkPosGraphY"></div>
+        <div id="landmarkPosGraphX"></div>
+      </div>
+    </div>
       
-    // 選択できる部位のリスト
-    const selectParts = ["LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP"];
-    // 初期値
-    let selectedPart = selectParts[2];
-    // 選択肢のリストを作成
-    const selectPartsElement = document.getElementById('poseList');
-    // リストにアイテムを追加
-    selectParts.forEach((part) => {
-      const option = document.createElement('li');
-      option.innerText = part;
-      option.addEventListener('click', () => {
-        selectedPart = part;
-        socket.emit("selectPart", {part: part})
-        layoutX = createLandmarkLayout(selectedPart, "X");
-        layoutY = createLandmarkLayout(selectedPart, "Y");
-        selectPartsElement.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
-        option.classList.add('selected');
+    <ul id="poseList" class = "flex flex-col w-1/4"></ul>
+
+    <script>
+      // initialize
+
+      // 選択できる部位のリスト
+      const selectParts = ["LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP"];
+      let selectedPart = selectParts[2];
+      // 選択肢のリストを作成
+      const selectPartsElement = document.getElementById('poseList');
+      // リストにアイテムを追加
+      selectParts.forEach((part) => {
+        const option = document.createElement('li');
+        option.innerText = part;
+        option.addEventListener('click', () => {
+          selectedPart = part;
+          socket.emit("selectPart", {part: part})
+          layoutX = createLandmarkLayout(selectedPart, "X");
+          layoutY = createLandmarkLayout(selectedPart, "Y");
+          selectPartsElement.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+          option.classList.add('selected');
+        });
+        selectPartsElement.appendChild(option);
       });
-      selectPartsElement.appendChild(option);
-    });
-      
-    var socket = io();
 
-    var dataY = [{
-        y: [],
-        type: 'line'
-    }];
+      // webSocketの初期化
+      var socket = io();
 
-    var dataX = [{
-        y: [],
-        type: 'line'
-    }];
+      // ランドマークグラフの設定
+      var landmarkPosY = [{
+          y: [],
+          type: 'line'
+      }];
 
-    function createLandmarkLayout(graphTitle, axis) {
-      const graphLayout = {
-          title: graphTitle + ' ' + axis + ' position over time',
-          xaxis: {
-              title: 'Timestamp',
-              showgrid: true,
-              zeroline: true,
-          },
-          yaxis: {
-              title: 'Y position',
-              showline: true,
-              zeroline: true,
-              range: [1.0, -0.5]
-          }
-      };
-      return graphLayout;
-    }
+      var landmarkPosX = [{
+          y: [],
+          type: 'line'
+      }];
 
-    var layoutX = createLandmarkLayout(selectedPart, "X");
-    var layoutY = createLandmarkLayout(selectedPart, "Y");
-
-        let layoutGraph = {
-          title: 'Real-time Histogram',
-          xaxis: { title: 'Count' },
-          yaxis: { title: 'Value' }
+      // ランドマークグラフのレイアウト関数
+      function createLandmarkLayout(graphTitle, axis) {
+        const graphLayout = {
+            height: 1000,
+            title: graphTitle + ' ' + axis + ' position over time',
+            xaxis: {
+                title: 'Timestamp',
+                showgrid: true,
+                zeroline: true,
+                tickfont: {size: 30,}
+            },
+            yaxis: {
+                title: 'Y position',
+                showline: true,
+                zeroline: true,
+                range: [1.0, -0.5],
+                tickfont: {size: 30,}
+            }
         };
+        return graphLayout;
+      }
 
-        let dataGraph = [{
+      var layoutX = createLandmarkLayout(selectedPart, "X");
+      var layoutY = createLandmarkLayout(selectedPart, "Y");
+
+      let estimateLayout = {
+        width: 1000,
+        title: 'Real-time Histogram',
+        xaxis: { title: 'Count',
+                tickfont: {size: 30,}},
+        yaxis: { title: 'Value' }
+      };
+
+      let estimateData = [{
+        x: ["neutral", "excl", "question", "thinking", "swing"],
+        y: [0,0,0,0,0],
+        type: 'bar',
+        xbins: {
+          size: 2 // ビンの幅を指定（例: 2）
+        }
+      }];
+
+      Plotly.newPlot('landmarkPosGraphY', landmarkPosY, layoutY);
+      Plotly.newPlot('landmarkPosGraphX', landmarkPosX, layoutX);
+      Plotly.newPlot('estimateGraph', estimateData, estimateLayout);
+
+      // 表示する秒間を指定する
+      const showSecond = 2.5;  // 2.5秒間のデータを表示する
+      const showdFrameNum = showSecond * 30;
+      const answer = {"0":"neutral","1":"excl","2":"question","3":"thinking","4":"swing"}
+      const outputElement = document.getElementById('output');
+
+      // サーバーからの推論・骨格データを受け取る
+      socket.on('newcoords', function(msg) {
+              
+        // 選択した部位の座標を更新
+        var y = landmarkPosY[0].y;
+        y.push(msg.y); 
+        if (y.length > showdFrameNum) {
+          // 表示する最大フレーム数を超えたらカット
+          y.splice(0, 1);
+        }
+
+        var x = landmarkPosX[0].y;
+        x.push(msg.x);
+        if (x.length > showdFrameNum) {
+            x.splice(0, 1);
+        }
+
+        // 推論データを更新
+        // estimateData[0].y = msg.data;
+        let colors = ["#AED6F1", "#AED6F1", "#AED6F1", "#AED6F1", "#AED6F1"]
+        let maxIndex = msg.data.indexOf(Math.max(...msg.data));
+        colors[maxIndex] = "#82E0AA";
+        console.log(colors);
+
+        estimateData[0] = {
           x: ["neutral", "excl", "question", "thinking", "swing"],
-          y: [0,0,0,0,0],
+          y: msg.data,
           type: 'bar',
           xbins: {
-           size: 2 // ビンの幅を指定（例: 2）
-          }
-        }];
+            size: 2 // ビンの幅を指定（例: 2）
+          },
+          marker: {color: colors}
+        };
+        
+        // グラフのアップデート
+        Plotly.update('landmarkPosGraphY', landmarkPosY, layoutY);
+        Plotly.update('landmarkPosGraphX', landmarkPosX, layoutX);
+        Plotly.update("estimateGraph", estimateData, estimateLayout)
+        
+        // 推論結果の表示
+        outputElement.innerHTML = ''; // 現在の内容をクリア
+        for (let i = 0; i < msg.data.length; i++) {
+          const paragraph = document.createElement('p'); 
+          paragraph.innerText = answer[i] + ": " + msg.data[i];
+          outputElement.appendChild(paragraph);
+        }
+      });
 
-        Plotly.newPlot('chartY', dataY, layoutY);
-        Plotly.newPlot('chartX', dataX, layoutX);
-        Plotly.newPlot('chart', dataGraph, layoutGraph);
-
-        socket.on('newcoords', function(msg) {
-            var y = dataY[0].y;
-            y.push(msg.y);
-            if (y.length > 50) {
-                y.splice(0, 1);
-            }
-
-            var x = dataX[0].y;
-            x.push(msg.x);
-            if (x.length > 50) {
-                x.splice(0, 1);
-            }
-
-            dataGraph[0].y = msg.data;
-            
-
-            Plotly.update('chartY', dataY, layoutY);
-            Plotly.update('chartX', dataX, layoutX);
-            Plotly.update("chart", dataGraph, layoutGraph)
-
-            let answer = {"0":"neutral","1":"excl","2":"question","3":"thinking","4":"swing"}
-
-            const outputElement = document.getElementById('output');
-            outputElement.innerHTML = ''; // 現在の内容をクリア
-            for (let i = 0; i < msg.data.length; i++) {
-              const paragraph = document.createElement('p');      
-              paragraph.innerText = answer[i] + ": " + msg.data[i];
-              outputElement.appendChild(paragraph);
-            }
-
-        });
+      // 小数点cut桁まで切り捨てる関数
+      function cutOffDecimals(num) {
+        const cut = 8;
+        const power = Math.pow(10, cut);
+        return Math.floor(num * power) / power;
+      }
 
     </script>
-</body>
+  </body>
 </html>
