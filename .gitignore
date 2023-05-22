@@ -2,3 +2,9 @@ MoChiOn.code-workspace
 .vscode/
 __pycache__/
 tools/create_dataset/video/*.mp4
+
+# web tools (browsing)
+tools/browsing/poetry.lock
+tools/browsing/.venv/
+
+
