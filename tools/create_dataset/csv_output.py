@@ -4,7 +4,7 @@ from datetime import datetime
 class CsvSaveService:
 
   def __init__(self, filepath: str):
-    self.filepath = filepath
+    self.filepath = filepath 
     self.is_first = True
     pass
 

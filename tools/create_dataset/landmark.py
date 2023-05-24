@@ -32,6 +32,13 @@ class LandmarkCreator:
         # ランドマーク名 : [x, y] の辞書を作成
         result[self.mp_pose.PoseLandmark(idx).name] = {"x":landmark["x"],"y":landmark["y"]}
       return result
+    
+    def get_frip_landmarks(self):
+      result = {}
+      for idx, landmark in enumerate(self.pose_landmarks):
+        # ランドマーク名 : [x, y] の辞書を作成
+        result[self.mp_pose.PoseLandmark(idx).name] = {"x":-landmark["x"],"y":landmark["y"]}
+      return result
 
         
     @staticmethod

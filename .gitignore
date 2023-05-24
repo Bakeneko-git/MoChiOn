@@ -9,3 +9,5 @@ tools/browsing/.venv/
 tools/browsing/cache/*.jpg
 
 
+*.csv
+*.mp4

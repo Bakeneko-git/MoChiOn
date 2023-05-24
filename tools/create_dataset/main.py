@@ -17,7 +17,7 @@ entire_frame = 150 # 全フレーム (5s x 30fps)
 for file in file_list:
     print("file: " + file + " is processing...")
     video_capture = cv2.VideoCapture(video_directory + "/" + file)
-    csv_save = csv_output.CsvSaveService(os.path.dirname(__file__) + "/" + file + ".csv")
+    csv_save = csv_output.CsvSaveService(os.path.dirname(__file__) + "/" + file + "_frip" + ".csv")
 
     # フレームカウントの初期化
     frame_count = 0
@@ -41,6 +41,10 @@ for file in file_list:
       data_source = {}
       data_source["pose"]  = landmarker.get_landmarks()
 
+      # csv_save.save_data(data_source)
+
+      # firp
+      data_source["pose"]  = landmarker.get_frip_landmarks()
       csv_save.save_data(data_source)
 
       frame_count += 1
