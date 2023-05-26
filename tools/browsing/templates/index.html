@@ -113,7 +113,22 @@
         title: 'Real-time Histogram',
         xaxis: { title: 'Count',
                 tickfont: {size: 30,}},
-        yaxis: { title: 'Value' }
+        yaxis: {  title: 'Value' ,
+                  range: [0, 1.0]
+                },
+        'shapes': [
+        {
+            'type': 'line',
+            'x0': 0,
+            'y0': 0.95,
+            'x1': 4.5,
+            'y1': 0.95,
+            'line': {
+                'color': 'red',
+                'width': 3,
+            },
+        },
+    ]
       };
 
       let estimateData = [{
