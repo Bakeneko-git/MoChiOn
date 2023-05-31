@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "osc"
+version = "0.1.0"
+description = ""
+authors = ["touka_aoi_desktop <toukaseisei@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+nnabla = "^1.35.1"
+mediapipe = "^0.10.0"
+opencv-python = "^4.7.0.72"
+pywin32 = "^306"
+python-osc = "^1.8.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
