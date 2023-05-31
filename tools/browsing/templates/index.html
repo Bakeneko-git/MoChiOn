@@ -132,8 +132,8 @@
       };
 
       let estimateData = [{
-        x: ["neutral", "excl", "question", "thinking", "swing"],
-        y: [0,0,0,0,0],
+        x: ["excl", "question", "thinking", "swing"],
+        y: [0,0,0,0],
         type: 'bar',
         xbins: {
           size: 2 // ビンの幅を指定（例: 2）
@@ -147,7 +147,7 @@
       // 表示する秒間を指定する
       const showSecond = 2.5;  // 2.5秒間のデータを表示する
       const showdFrameNum = showSecond * 30;
-      const answer = {"0":"neutral","1":"excl","2":"question","3":"thinking","4":"swing"}
+      const answer = {"0":"excl","1":"question","2":"thinking","3":"swing"}
       const outputElement = document.getElementById('output');
 
       // サーバーからの推論・骨格データを受け取る
@@ -175,7 +175,7 @@
         console.log(colors);
 
         estimateData[0] = {
-          x: ["neutral", "excl", "question", "thinking", "swing"],
+          x: ["excl", "question", "thinking", "swing"],
           y: msg.data,
           type: 'bar',
           xbins: {

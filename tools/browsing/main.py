@@ -9,13 +9,13 @@ import numpy as np
 import datetime
 import os 
 import threading
+import imageio
 
 # initialize 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
-
 
 # socketioとmediapipeの対応付けリスト
 selectParts = {"LEFT_SHOULDER" : mp_pose.PoseLandmark.LEFT_SHOULDER, 
@@ -26,7 +26,9 @@ selectParts = {"LEFT_SHOULDER" : mp_pose.PoseLandmark.LEFT_SHOULDER,
               "RIGHT_WRIST" : mp_pose.PoseLandmark.RIGHT_WRIST,
               "LEFT_HIP" : mp_pose.PoseLandmark.LEFT_HIP,
               "RIGHT_HIP" : mp_pose.PoseLandmark.RIGHT_HIP}
-answer = {"0":"neutral","1":"excl","2":"question","3":"thinking","4":"swing"}
+
+answer = {"0":"excl","1":"question","2":"thinking","3":"swing"}
+
 # ランドマーク初期値
 graph_landmark = mp_pose.PoseLandmark.LEFT_WRIST
 
@@ -38,7 +40,7 @@ image_storage = deque(maxlen=frame_num) # 画像フレームのストレージ
 
 # nnablaの初期設定
 batch_size = 1
-nnp = NnpLoader("18landmark.nnp")
+nnp = NnpLoader("5sNewModel.nnp")
 net = nnp.get_network("Runtime", batch_size=batch_size)
 x = net.inputs["Input"]
 y = net.outputs["y'"]
@@ -48,20 +50,37 @@ thread_is_running = False
 
 # 推論結果を鼻からの相対距離にする
 def nose_centered(landmarks):
-    landmark_point = []
-    # ランドマークの中心をNoseに設定する
-    center_x = landmarks.landmark[0].x
-    center_y = landmarks.landmark[0].y
+  landmark_point = []
+  # ランドマークの中心をNoseに設定する
+  center_x = landmarks.landmark[0].x
+  center_y = landmarks.landmark[0].y
 
-    for landmark in landmarks.landmark:
-        landmark_x = landmark.x - center_x
-        landmark_y = landmark.y - center_y
-        landmark_point.extend([landmark_x, landmark_y])
-    return landmark_point
+  for landmark in landmarks.landmark:
+    landmark_x = landmark.x - center_x
+    landmark_y = landmark.y - center_y
+    landmark_point.extend([landmark_x, landmark_y])
+  return landmark_point
 
+def filter_landmark(landmarks: list) -> list:
+  l1 = [ _*2 for _ in [0,11,12,13,14,15,16,23,24]]
+  l2 = [ _ + 1 for _ in l1]
+  filter_landmarks = [landmarks[y] for x in zip(l1, l2) for y in x]
+  return filter_landmarks
 
-def gen_frames():  
+def estimate(pose_storage: deque) -> np.ndarray:
+  x.d = np.array(pose_storage, dtype=np.float16)
+  y.forward()
+  ans = np.array(y.d.copy())
+  ans = ans.flatten()
+  return ans
+
+def encode_image(image) -> bytes:
+  _, buffer = cv2.imencode('.jpg', image)
+  return buffer.tobytes()
+
+def gen_frames(is_cache=False):  
   global graph_landmark
+
   cap = cv2.VideoCapture(0)  # Capture video from webcam
   
   with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
@@ -86,20 +105,16 @@ def gen_frames():
       # Draw the pose annotations on the image
       image.flags.writeable = True
       image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
       mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-      image_storage.append(image) # 画像フレームのキャッシュ
 
       # 推論
-
       if results.pose_landmarks is not None:
         # landmark = results.pose_landmarks.landmark[graph_landmark]
         # pre_process landmark
         landmarks = nose_centered(results.pose_landmarks)
         # select only 18 landmarks
-        l1 = [ _*2 for _ in [0,11,12,13,14,15,16,23,24]]
-        l2 = [ _ + 1 for _ in l1]
-        filter_landmarks = [landmarks[y] for x in zip(l1, l2) for y in x]
-
+        filter_landmarks = filter_landmark(landmarks)
         # store frame for estimation
         pose_storage.append(filter_landmarks)
 
@@ -107,59 +122,50 @@ def gen_frames():
         landmark = results.pose_landmarks.landmark[graph_landmark]
 
         if (len(pose_storage) >= frame_num): 
-          # estimation
-          x.d = np.array(pose_storage, dtype=np.float16)
-          y.forward()
-          ans = np.array(y.d.copy())
-          ans = ans.flatten()
-          if (max(ans) > 0.98 and 0 != np.argmax(ans) and thread_is_running == False):
-            # cache file
-            ans_name = answer[str(np.argmax(ans))]
-            create_thread(image_storage.copy(), ans_name)
+          ans = estimate(pose_storage)
           socketio.emit('newcoords', {'x': landmark.x, 'y': landmark.y, 'data': ans.tolist() }) 
+          if (is_cache):
+            image_storage.append(image) # 画像フレームのキャッシュ
+            if (thread_is_running == False):
+              if (max(ans) > 0.98 and 1 == np.argmax(ans)):
+                ans_name = answer[str(np.argmax(ans))]
+                print("crearte thread")
+                create_thread(image_storage.copy(), ans_name)
         else:
           socketio.emit('newcoords', {'x': landmark.x, 'y': landmark.y, 'data': [0, 0, 0, 0, 0]})
-      else:
-        # store frame for estimation (if no pose detected, store 0)
-        pose_storage.append([0]*18)
-      
 
+      else:
+        # 推論が失敗した場合
+        pose_storage.append([0] * len(filter_landmarks))
+    
       # Convert the image color and return as a video frame
-      ret, buffer = cv2.imencode('.jpg', image)
-      frame = buffer.tobytes()
-      yield (b'--frame\r\n'
-              b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n') 
+      frame = encode_image(image)
+      yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
       
 # 画像を保存する関数
 def save_images(cache, time_stamp):
-    global thread_is_running
+  global thread_is_running
 
-    thread_is_running = True  # スレッドが開始したことを示す
+  thread_is_running = True  # スレッドが開始したことを示す
 
-    for idx, image in enumerate(cache):
-        cv2.imwrite('cache/' + time_stamp + '_' + str(idx) + '.jpg', image)
+  for idx, image in enumerate(cache):
+      cv2.imwrite('cache/' + time_stamp + '_' + str(idx) + '.jpg', image)
 
-    thread_is_running = False  # スレッドが終了したことを示す
+  thread_is_running = False  # スレッドが終了したことを示す
 
 # キャッシュに画像を保存するスレッドを作成
 def create_thread(cache, filename):
-    global thread_is_running
-    print(thread_is_running)
-
-
-    # 既にスレッドが実行中でない場合にのみ新しいスレッドを作成
-    if not thread_is_running:
-      time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-      thread = threading.Thread(target=save_images, args=(cache, filename + time_stamp))
-      thread.start()
+  time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+  thread = threading.Thread(target=save_images, args=(cache, filename + time_stamp))
+  thread.start()
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+  return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+  return render_template("index.html")
 
 # グラフのランドマークを変更する
 @socketio.on('selectPart')
