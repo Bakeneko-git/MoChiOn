@@ -1,9 +1,25 @@
 import modlues
+import numpy as np
 
 import cv2
 
 def main():
-    pose_process_test()
+    process()
+
+
+def process():
+    pose_process = modlues.pose_process.Pose_process("./model/model.nnp")
+    osc_client = modlues.osc.OSC()
+    thred = 0.98
+    for res in pose_process.start():
+        if res is None:
+            continue
+        max_prob = np.max(res)
+        if (max_prob < thred):
+            continue
+        ans = np.argmax(res)
+        osc_client.send("/pose", int(ans))
+
 
 def camera_test():
     camera = modlues.camera.Camera()
@@ -30,6 +46,14 @@ def pose_process_test():
             continue
         # 表示する
         print(frame)
+
+def osc_test():
+    import time
+    osc_client = modlues.osc.OSC()
+    for i in range(10):
+        osc_client.send("/test", i)
+        print("sended")
+        time.sleep(1)   
 
 if __name__ == '__main__':
     main()
