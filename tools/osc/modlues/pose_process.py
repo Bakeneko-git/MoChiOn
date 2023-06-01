@@ -9,5 +9,6 @@ class Pose_process:
     for frame in self.image_process.start():
       if frame is None:
         yield None
+        continue
       ans = self.gesture.estimate(frame)
       yield ans
